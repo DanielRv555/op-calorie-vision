@@ -10,7 +10,7 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const identifyFoodInImage = async (imageFile: File, description: string): Promise<string[]> => {
   const base64Image = await fileToBase64(imageFile);
