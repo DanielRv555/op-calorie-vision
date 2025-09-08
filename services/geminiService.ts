@@ -1,6 +1,22 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { NutritionData } from '../types';
 
+let ai: GoogleGenAI | null = null;
+
+export const initializeAiClient = (apiKey: string) => {
+  if (!apiKey) {
+    throw new Error("Se requiere una clave de API para inicializar el cliente de IA.");
+  }
+  ai = new GoogleGenAI({ apiKey });
+};
+
+const getAiClient = (): GoogleGenAI => {
+    if (!ai) {
+        throw new Error("El cliente de IA no ha sido inicializado. Por favor, llama a initializeAiClient primero.");
+    }
+    return ai;
+}
+
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -10,13 +26,12 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const identifyFoodInImage = async (imageFile: File, description: string): Promise<string[]> => {
+  const aiClient = getAiClient();
   const base64Image = await fileToBase64(imageFile);
   const promptText = `Identifica todos los alimentos distintos en esta imagen. No incluyas condimentos o guarniciones a menos que sean una parte importante del plato. Responde con un array JSON de strings.${description ? `\n\nAquí hay una descripción adicional del usuario para dar más contexto: "${description}"` : ''}`;
 
-  const response = await ai.models.generateContent({
+  const response = await aiClient.models.generateContent({
     model: 'gemini-2.5-flash',
     contents: {
       parts: [
@@ -56,11 +71,12 @@ export const identifyFoodInImage = async (imageFile: File, description: string):
 };
 
 export const getNutritionalInfo = async (imageFile: File, foodList: string[], description: string): Promise<NutritionData> => {
+  const aiClient = getAiClient();
   const base64Image = await fileToBase64(imageFile);
 
   const prompt = `Basado en la imagen proporcionada y esta lista de alimentos identificados: ${foodList.join(', ')},${description ? ` y la siguiente descripción del usuario: "${description}",` : ''} proporciona un análisis nutricional aproximado para la comida completa. Estima el total de calorías, proteína en gramos, carbohidratos en gramos y grasa en gramos. Proporciona únicamente un objeto JSON con las claves "calories", "protein", "carbs" y "fat", con valores numéricos.`;
 
-  const response = await ai.models.generateContent({
+  const response = await aiClient.models.generateContent({
     model: 'gemini-2.5-flash',
     contents: {
       parts: [
