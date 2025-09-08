@@ -25,5 +25,8 @@ export const saveHistory = (username: string, history: HistoryEntry[]): void => 
     localStorage.setItem(userHistoryKey, historyJson);
   } catch (error) {
     console.error("Failed to save history to localStorage", error);
+    if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+        alert("No se pudo guardar la comida en el historial porque el almacenamiento está lleno.");
+    }
   }
 };

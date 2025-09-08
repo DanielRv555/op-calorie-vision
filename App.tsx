@@ -18,6 +18,49 @@ import RecipesView from './components/RecipesView';
 import ApiKeyInput from './components/ApiKeyInput';
 import SettingsView from './components/SettingsView';
 
+const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      if (!event.target?.result) {
+        return reject(new Error("No se pudo leer el archivo de imagen."));
+      }
+      const img = new Image();
+      img.src = event.target.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return reject(new Error('No se pudo obtener el contexto del canvas.'));
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Use JPEG for photo compression, with a reasonable quality level.
+        resolve(canvas.toDataURL('image/jpeg', 0.85)); 
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 
 const App: React.FC = () => {
   const [apiKey, setApiKey] = useState<string | null>(() => localStorage.getItem('GEMINI_API_KEY'));
@@ -116,14 +159,27 @@ const App: React.FC = () => {
     setAppState('idle');
   };
 
-  const handleImageUpload = (file: File) => {
+  const handleImageUpload = async (file: File) => {
     setImageFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImageDataUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-    setAppState('image_uploaded');
+    try {
+      // For display and history, use a resized image to save space, especially on mobile.
+      const resizedDataUrl = await resizeImage(file, 800, 800);
+      setImageDataUrl(resizedDataUrl);
+      setAppState('image_uploaded');
+    } catch (error) {
+      console.error("Error al redimensionar la imagen, reintentando sin redimensionar:", error);
+      // Fallback to full size if resizing fails.
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageDataUrl(reader.result as string);
+        setAppState('image_uploaded');
+      };
+      reader.onerror = () => {
+        setErrorMessage('No se pudo leer el archivo de imagen. Por favor, intenta de nuevo.');
+        setAppState('error');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleIdentifyFoods = useCallback(async () => {
@@ -160,8 +216,10 @@ const App: React.FC = () => {
       
       setHistory(currentHistory => {
         const updatedHistory = [newHistoryEntry, ...currentHistory];
-        saveHistory(user.usuario, updatedHistory);
-        return updatedHistory;
+        // Limit history to 100 entries to prevent storage issues
+        const cappedHistory = updatedHistory.slice(0, 100);
+        saveHistory(user.usuario, cappedHistory);
+        return cappedHistory;
       });
 
       setAppState('complete');
