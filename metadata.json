@@ -1,0 +1,5 @@
+{
+  "name": "Calorie Vision",
+  "description": "Una aplicación inteligente que analiza fotos de tus comidas para identificar alimentos y proporcionar un recuento estimado de calorías y macronutrientes.",
+  "requestFramePermissions": []
+}
