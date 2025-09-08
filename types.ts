@@ -45,4 +45,5 @@ export type AppState =
   | 'error'
   | 'viewing_history'
   | 'setting_goals'
+  | 'viewing_settings'
   | 'viewing_recipes';

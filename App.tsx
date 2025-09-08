@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { identifyFoodInImage, getNutritionalInfo } from './services/geminiService';
+import { identifyFoodInImage, getNutritionalInfo, initializeAiClient } from './services/geminiService';
 import { getHistory, saveHistory } from './services/historyService';
 import { login, getUserSession, logout } from './services/authService';
 import { getGoals, saveGoals } from './services/goalService';
@@ -15,8 +15,12 @@ import HistoryView from './components/HistoryView';
 import GoalsView from './components/GoalsView';
 import Login from './components/Login';
 import RecipesView from './components/RecipesView';
+import ApiKeyInput from './components/ApiKeyInput';
+import SettingsView from './components/SettingsView';
+
 
 const App: React.FC = () => {
+  const [apiKey, setApiKey] = useState<string | null>(() => localStorage.getItem('GEMINI_API_KEY'));
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setAuthIsLoading] = useState(true);
   const [appState, setAppState] = useState<AppState>('idle');
@@ -30,6 +34,20 @@ const App: React.FC = () => {
   const [mealDescription, setMealDescription] = useState<string>('');
   const [goals, setGoals] = useState<GoalData | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+
+  useEffect(() => {
+    if (apiKey) {
+      try {
+        initializeAiClient(apiKey);
+        localStorage.setItem('GEMINI_API_KEY', apiKey);
+      } catch (error) {
+        console.error("Failed to initialize AI client:", error);
+        localStorage.removeItem('GEMINI_API_KEY');
+        setApiKey(null); 
+        alert("La clave de API proporcionada no es válida. Por favor, inténtalo de nuevo.");
+      }
+    }
+  }, [apiKey]);
   
   const loadRecipes = async () => {
     try {
@@ -41,15 +59,17 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    const session = getUserSession();
-    if (session) {
-      setUser(session);
-      setHistory(getHistory(session.usuario));
-      setGoals(getGoals(session.usuario));
-      loadRecipes();
+    if (apiKey) {
+      const session = getUserSession();
+      if (session) {
+        setUser(session);
+        setHistory(getHistory(session.usuario));
+        setGoals(getGoals(session.usuario));
+        loadRecipes();
+      }
+      setAuthIsLoading(false);
     }
-    setAuthIsLoading(false);
-  }, []);
+  }, [apiKey]);
 
   const resetState = () => {
     setAppState('idle');
@@ -60,6 +80,16 @@ const App: React.FC = () => {
     setErrorMessage(null);
     setSelectedHistoryItem(null);
     setMealDescription('');
+  };
+
+  const handleSetApiKey = (key: string) => {
+    setApiKey(key);
+  };
+
+  const handleUpdateApiKey = (newKey: string) => {
+    setApiKey(newKey);
+    alert("Clave de API actualizada correctamente.");
+    setAppState('idle');
   };
 
   const handleLogin = async (usuario: string, codigo: string) => {
@@ -152,6 +182,10 @@ const App: React.FC = () => {
     setAppState('viewing_recipes');
   };
 
+  const handleShowSettings = () => {
+    setAppState('viewing_settings');
+  };
+
   const handleDeleteHistoryEntry = (id: number) => {
     if (!user) return;
     const updatedHistory = history.filter(entry => entry.id !== id);
@@ -198,6 +232,13 @@ const App: React.FC = () => {
             onBack={resetState}
           />
         );
+      case 'viewing_settings':
+        return (
+           <SettingsView
+              onUpdateApiKey={handleUpdateApiKey}
+              onBack={resetState}
+            />
+        );
       case 'viewing_recipes':
         return <RecipesView recipes={recipes} onBack={resetState} />;
       case 'viewing_history':
@@ -230,6 +271,14 @@ const App: React.FC = () => {
     }
   };
 
+  if (!apiKey) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <ApiKeyInput onSubmit={handleSetApiKey} />
+      </div>
+    );
+  }
+
   if (isAuthLoading) {
     return <Loader message="Cargando..." />;
   }
@@ -242,7 +291,7 @@ const App: React.FC = () => {
          </main>
       ) : (
         <>
-          <Header onShowHistory={handleShowHistory} onShowGoals={handleShowGoals} onLogout={handleLogout} onShowRecipes={handleShowRecipes} />
+          <Header onShowHistory={handleShowHistory} onShowGoals={handleShowGoals} onLogout={handleLogout} onShowRecipes={handleShowRecipes} onShowSettings={handleShowSettings} />
           <main className="w-full p-4 sm:p-6 lg:p-8 flex-grow">
             {renderContent()}
           </main>

@@ -4,6 +4,7 @@ import { RecipeBookIcon } from './icons/BookOpenIcon';
 import { LogoutIcon } from './icons/LogoutIcon';
 import { FireIcon } from './icons/TargetIcon';
 import { HistoryIcon } from './icons/HistoryIcon';
+import { CogIcon } from './icons/CogIcon';
 
 
 interface HeaderProps {
@@ -11,10 +12,11 @@ interface HeaderProps {
   onShowGoals: () => void;
   onLogout: () => void;
   onShowRecipes: () => void;
+  onShowSettings: () => void;
 }
 
 
-const Header: React.FC<HeaderProps> = ({ onShowHistory, onShowGoals, onLogout, onShowRecipes }) => {
+const Header: React.FC<HeaderProps> = ({ onShowHistory, onShowGoals, onLogout, onShowRecipes, onShowSettings }) => {
   return (
     <header className="w-full bg-white shadow-sm sticky top-0 z-10">
       <div className="py-3 px-4 sm:px-6 lg:px-8">
@@ -46,6 +48,13 @@ const Header: React.FC<HeaderProps> = ({ onShowHistory, onShowGoals, onLogout, o
               className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
             >
               <HistoryIcon className="w-6 h-6" />
+            </button>
+            <button
+              onClick={onShowSettings}
+              aria-label="Configuración"
+              className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+            >
+              <CogIcon className="w-6 h-6" />
             </button>
             <button
               onClick={onLogout}
