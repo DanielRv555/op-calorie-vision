@@ -157,9 +157,12 @@ const App: React.FC = () => {
         nutritionInfo: nutrition,
         mealDescription: mealDescription,
       };
-      const updatedHistory = [newHistoryEntry, ...history];
-      setHistory(updatedHistory);
-      saveHistory(user.usuario, updatedHistory);
+      
+      setHistory(currentHistory => {
+        const updatedHistory = [newHistoryEntry, ...currentHistory];
+        saveHistory(user.usuario, updatedHistory);
+        return updatedHistory;
+      });
 
       setAppState('complete');
     } catch (error) {
@@ -167,7 +170,7 @@ const App: React.FC = () => {
       setErrorMessage('No se pudo analizar la nutrición. La respuesta puede ser inválida.');
       setAppState('error');
     }
-  }, [imageFile, imageDataUrl, identifiedFoods, history, user, mealDescription]);
+  }, [imageFile, imageDataUrl, identifiedFoods, user, mealDescription]);
 
   const handleShowHistory = () => {
     setAppState('viewing_history');
